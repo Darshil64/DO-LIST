@@ -1,4 +1,4 @@
-# Python
+# Python bytecode
 __pycache__/
 *.py[cod]
 *.pyo
@@ -15,7 +15,7 @@ env/
 .venv/
 .env/
 
-# Tasks data file (optional - remove this line if you want to track tasks)
+# Runtime data — do not commit
 tasks.json
 
 # IDE
