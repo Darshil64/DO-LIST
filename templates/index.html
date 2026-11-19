@@ -1,0 +1,586 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>To-Do List</title>
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    body {
+      font-family: 'Segoe UI', system-ui, -apple-system, sans-serif;
+      background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+      min-height: 100vh;
+      padding: 24px 16px 60px;
+    }
+
+    .wrapper { max-width: 700px; margin: 0 auto; }
+
+    /* ── Header ── */
+    .header { text-align: center; margin-bottom: 28px; }
+    .header h1 { font-size: 2.4rem; font-weight: 800; color: #fff;
+                 text-shadow: 0 2px 10px rgba(0,0,0,.2); letter-spacing: -1px; }
+    .header p  { color: rgba(255,255,255,.75); font-size: .9rem; margin-top: 4px; }
+
+    /* ── Stats ── */
+    .stats { display: flex; gap: 12px; margin-bottom: 20px; }
+    .stat-pill {
+      flex: 1; background: rgba(255,255,255,.18);
+      backdrop-filter: blur(10px); border: 1px solid rgba(255,255,255,.25);
+      border-radius: 14px; padding: 12px 10px; text-align: center; color: #fff;
+    }
+    .stat-pill .num { font-size: 1.7rem; font-weight: 800; line-height: 1; }
+    .stat-pill .lbl { font-size: .7rem; opacity: .8; text-transform: uppercase;
+                      letter-spacing: .5px; margin-top: 3px; }
+
+    /* ── Card ── */
+    .card { background: #fff; border-radius: 20px;
+            box-shadow: 0 20px 60px rgba(0,0,0,.18); overflow: hidden; }
+
+    /* ── Add section ── */
+    .add-section { padding: 20px; border-bottom: 1px solid #f1f3f7; background: #fafbff; }
+    .add-row { display: flex; gap: 10px; }
+    .task-input {
+      flex: 1; padding: 12px 16px; border: 2px solid #e8ecf4;
+      border-radius: 12px; font-size: .95rem; outline: none;
+      transition: border-color .2s, box-shadow .2s; color: #1a1a2e; background: #fff;
+    }
+    .task-input:focus { border-color: #667eea; box-shadow: 0 0 0 3px rgba(102,126,234,.12); }
+    .task-input::placeholder { color: #aab0c4; }
+
+    /* ── Buttons ── */
+    .btn {
+      display: inline-flex; align-items: center; gap: 6px;
+      padding: 12px 20px; border-radius: 12px; border: none;
+      cursor: pointer; font-size: .9rem; font-weight: 600; transition: all .18s;
+    }
+    .btn-primary {
+      background: linear-gradient(135deg, #667eea, #764ba2);
+      color: #fff; box-shadow: 0 4px 14px rgba(102,126,234,.35);
+    }
+    .btn-primary:hover { transform: translateY(-1px); box-shadow: 0 6px 18px rgba(102,126,234,.45); }
+    .btn-sm { padding: 7px 13px; font-size: .78rem; border-radius: 8px; }
+    .btn-ghost   { background: transparent; color: #667eea; border: 1.5px solid #e8ecf4; }
+    .btn-ghost:hover  { background: #f4f6ff; border-color: #c5ccee; }
+    .btn-warning { background: #fffbea; color: #d97706; border: 1.5px solid #fde68a; }
+    .btn-warning:hover { background: #fef3c7; }
+    .btn-danger  { background: #fff0f0; color: #e53e3e; border: 1.5px solid #fbd5d5; }
+    .btn-danger:hover  { background: #ffe4e4; }
+
+    /* ── Filter tabs ── */
+    .filter-tabs {
+      display: flex; gap: 4px; padding: 12px 20px 0;
+      background: #fafbff; border-bottom: 1px solid #f1f3f7;
+    }
+    .tab {
+      padding: 8px 16px; border-radius: 10px 10px 0 0; border: none;
+      background: transparent; color: #8892b0; font-size: .82rem;
+      font-weight: 600; cursor: pointer; transition: all .18s;
+      position: relative; bottom: -1px;
+    }
+    .tab.active { background: #fff; color: #667eea;
+                  border: 1px solid #f1f3f7; border-bottom-color: #fff; }
+    .tab:not(.active):hover { background: rgba(102,126,234,.07); color: #667eea; }
+
+    /* ── Search ── */
+    .search-row { padding: 12px 20px; border-bottom: 1px solid #f1f3f7; }
+    .search-wrap { position: relative; }
+    .search-icon { position: absolute; left: 10px; top: 50%; transform: translateY(-50%);
+                   color: #aab0c4; pointer-events: none; }
+    .search-input {
+      width: 100%; padding: 9px 14px 9px 36px; border: 1.5px solid #e8ecf4;
+      border-radius: 10px; font-size: .88rem; outline: none;
+      background: #f8f9fd; transition: border-color .2s; color: #1a1a2e;
+    }
+    .search-input:focus { border-color: #667eea; background: #fff; }
+    .search-input::placeholder { color: #aab0c4; }
+
+    /* ── Task list ── */
+    .task-list { list-style: none; padding: 8px 0; min-height: 80px;
+                 max-height: 420px; overflow-y: auto; }
+    .task-list::-webkit-scrollbar { width: 5px; }
+    .task-list::-webkit-scrollbar-thumb { background: #dde1f0; border-radius: 3px; }
+
+    .task-item {
+      display: flex; align-items: center; gap: 12px;
+      padding: 11px 20px; border-bottom: 1px solid #f7f8fc;
+      transition: background .15s; animation: slideIn .22s ease;
+    }
+    .task-item:last-child { border-bottom: none; }
+    .task-item:hover { background: #f8f9ff; }
+    .task-item.done .task-title { text-decoration: line-through; color: #aab0c4; }
+
+    @keyframes slideIn {
+      from { opacity: 0; transform: translateY(-8px); }
+      to   { opacity: 1; transform: translateY(0); }
+    }
+
+    /* ── Checkbox ── */
+    .check-btn {
+      width: 22px; height: 22px; border-radius: 7px; border: 2px solid #d1d9f0;
+      background: #fff; cursor: pointer; flex-shrink: 0;
+      display: flex; align-items: center; justify-content: center; transition: all .18s;
+    }
+    .check-btn:hover { border-color: #667eea; background: #f4f6ff; }
+    .check-btn.checked { background: linear-gradient(135deg,#667eea,#764ba2); border-color: transparent; }
+    .check-btn .tick { display: none; }
+    .check-btn.checked .tick { display: block; }
+
+    /* ── Task info ── */
+    .task-info  { flex: 1; min-width: 0; }
+    .task-title { font-size: .93rem; font-weight: 500; color: #1a1a2e;
+                  white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+    .task-meta  { font-size: .72rem; color: #aab0c4; display: flex; gap: 8px;
+                  align-items: center; margin-top: 2px; }
+    .badge      { display: inline-block; border-radius: 5px; padding: 1px 7px;
+                  font-size: .68rem; font-weight: 700; }
+    .badge-id   { background: #f1f3f7; color: #8892b0; font-family: monospace; }
+    .badge-done { background: #f0fff4; color: #38a169; }
+
+    /* ── Task actions (hover) ── */
+    .task-actions { display: flex; gap: 5px; flex-shrink: 0; opacity: 0; transition: opacity .15s; }
+    .task-item:hover .task-actions { opacity: 1; }
+
+    /* ── Empty state ── */
+    .empty-state { text-align: center; padding: 50px 20px; color: #aab0c4; }
+    .empty-state .ei { font-size: 3rem; margin-bottom: 10px; }
+    .empty-state p   { font-size: .9rem; }
+
+    /* ── Progress ── */
+    .progress-wrap { padding: 12px 20px 16px; border-top: 1px solid #f1f3f7; }
+    .progress-label { display: flex; justify-content: space-between;
+                      font-size: .75rem; color: #8892b0; margin-bottom: 7px; }
+    .progress-bar { height: 7px; border-radius: 999px; background: #f1f3f7; overflow: hidden; }
+    .progress-fill { height: 100%; border-radius: 999px;
+                     background: linear-gradient(90deg,#667eea,#764ba2); transition: width .4s ease; }
+
+    /* ── Modal ── */
+    .modal-overlay {
+      display: none; position: fixed; inset: 0;
+      background: rgba(30,20,60,.45); backdrop-filter: blur(4px);
+      z-index: 100; align-items: center; justify-content: center;
+    }
+    .modal-overlay.open { display: flex; }
+    .modal {
+      background: #fff; border-radius: 18px;
+      box-shadow: 0 24px 60px rgba(0,0,0,.22);
+      width: 92%; max-width: 420px; animation: popIn .22s ease; overflow: hidden;
+    }
+    @keyframes popIn {
+      from { opacity: 0; transform: scale(.93) translateY(10px); }
+      to   { opacity: 1; transform: scale(1)   translateY(0); }
+    }
+    .modal-header {
+      padding: 18px 20px 14px; border-bottom: 1px solid #f1f3f7;
+      display: flex; align-items: center; justify-content: space-between;
+    }
+    .modal-header h2 { margin: 0; font-size: 1.05rem; color: #1a1a2e; }
+    .modal-close {
+      width: 28px; height: 28px; border-radius: 8px; border: none;
+      background: #f1f3f7; color: #8892b0; cursor: pointer; font-size: 1.1rem;
+      display: flex; align-items: center; justify-content: center;
+    }
+    .modal-close:hover { background: #e8ecf4; color: #1a1a2e; }
+    .modal-body   { padding: 18px 20px; }
+    .modal-footer { padding: 12px 20px; border-top: 1px solid #f1f3f7;
+                    display: flex; justify-content: flex-end; gap: 8px; }
+    .form-group { margin-bottom: 14px; }
+    .form-label {
+      display: block; font-size: .78rem; font-weight: 700; color: #667eea;
+      text-transform: uppercase; letter-spacing: .4px; margin-bottom: 6px;
+    }
+    .form-input {
+      width: 100%; padding: 10px 13px; border: 2px solid #e8ecf4;
+      border-radius: 10px; font-size: .93rem; outline: none; color: #1a1a2e;
+      transition: border-color .2s;
+    }
+    .form-input:focus { border-color: #667eea; }
+
+    /* ── Status toggle ── */
+    .status-toggle { display: flex; gap: 8px; }
+    .status-opt {
+      flex: 1; padding: 10px; border-radius: 10px; border: 2px solid #e8ecf4;
+      text-align: center; cursor: pointer; font-size: .82rem; font-weight: 600;
+      transition: all .15s; color: #8892b0; user-select: none;
+    }
+    .status-opt.pend { border-color: #f6ad55; background: #fffbea; color: #d97706; }
+    .status-opt.done { border-color: #68d391; background: #f0fff4; color: #38a169; }
+
+    /* ── Delete confirm ── */
+    .confirm-box { text-align: center; padding: 10px 0; }
+    .confirm-box .ci { font-size: 2.4rem; }
+    .confirm-box p { color: #4a5568; font-size: .93rem; margin-top: 10px; line-height: 1.6; }
+    .confirm-box strong { color: #1a1a2e; }
+
+    /* ── Toast ── */
+    .toast-wrap {
+      position: fixed; bottom: 24px; left: 50%; transform: translateX(-50%);
+      z-index: 999; display: flex; flex-direction: column; gap: 8px;
+      align-items: center; pointer-events: none;
+    }
+    .toast {
+      background: #1a1a2e; color: #fff; padding: 10px 22px;
+      border-radius: 24px; font-size: .85rem; font-weight: 500;
+      box-shadow: 0 8px 24px rgba(0,0,0,.25); white-space: nowrap;
+      animation: tIn .25s ease, tOut .3s ease 2.4s forwards;
+    }
+    .toast.ok  { background: linear-gradient(135deg,#48bb78,#38a169); }
+    .toast.err { background: linear-gradient(135deg,#fc8181,#e53e3e); }
+    @keyframes tIn  { from { opacity:0; transform:translateY(12px); } to { opacity:1; transform:translateY(0); } }
+    @keyframes tOut { to   { opacity:0; transform:translateY(10px); } }
+
+    /* ── Spinner ── */
+    .spinner {
+      display: none; width: 18px; height: 18px; border: 2.5px solid rgba(255,255,255,.4);
+      border-top-color: #fff; border-radius: 50%; animation: spin .6s linear infinite;
+    }
+    @keyframes spin { to { transform: rotate(360deg); } }
+    .loading .spinner { display: inline-block; }
+    .loading .label   { display: none; }
+  </style>
+</head>
+<body>
+<div class="wrapper">
+
+  <!-- Header -->
+  <div class="header">
+    <h1>&#9989; My To-Do List</h1>
+    <p>Python + Flask &bull; JSON Storage &bull; Full CRUD</p>
+  </div>
+
+  <!-- Stats -->
+  <div class="stats">
+    <div class="stat-pill"><div class="num" id="s-total">0</div><div class="lbl">Total</div></div>
+    <div class="stat-pill"><div class="num" id="s-pending">0</div><div class="lbl">Pending</div></div>
+    <div class="stat-pill"><div class="num" id="s-done">0</div><div class="lbl">Done</div></div>
+  </div>
+
+  <!-- Card -->
+  <div class="card">
+
+    <!-- Add task -->
+    <div class="add-section">
+      <div class="add-row">
+        <input id="new-input" class="task-input" type="text"
+               placeholder="What needs to be done? Press Enter to add..."
+               maxlength="120" autocomplete="off"/>
+        <button id="add-btn" class="btn btn-primary" onclick="handleAdd()">
+          <span class="spinner"></span>
+          <span class="label">
+            <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3.5">
+              <line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/>
+            </svg>
+            Add Task
+          </span>
+        </button>
+      </div>
+    </div>
+
+    <!-- Filter tabs -->
+    <div class="filter-tabs">
+      <button class="tab active" data-f="all"     onclick="setFilter('all',this)">All</button>
+      <button class="tab"        data-f="pending"  onclick="setFilter('pending',this)">&#9203; Pending</button>
+      <button class="tab"        data-f="done"     onclick="setFilter('done',this)">&#9989; Done</button>
+    </div>
+
+    <!-- Search -->
+    <div class="search-row">
+      <div class="search-wrap">
+        <span class="search-icon">
+          <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <circle cx="11" cy="11" r="8"/><path d="m21 21-4.35-4.35"/>
+          </svg>
+        </span>
+        <input id="search-input" class="search-input" type="text"
+               placeholder="Search tasks..." oninput="renderList()"/>
+      </div>
+    </div>
+
+    <!-- Tasks -->
+    <ul class="task-list" id="task-list"></ul>
+
+    <!-- Progress -->
+    <div class="progress-wrap">
+      <div class="progress-label">
+        <span>Completion Progress</span>
+        <span id="pct-label">0%</span>
+      </div>
+      <div class="progress-bar">
+        <div class="progress-fill" id="pct-fill" style="width:0%"></div>
+      </div>
+    </div>
+
+  </div><!-- /card -->
+</div><!-- /wrapper -->
+
+<!-- ══ Edit Modal ══ -->
+<div class="modal-overlay" id="edit-modal">
+  <div class="modal">
+    <div class="modal-header">
+      <h2>&#9999;&#65039; Edit Task</h2>
+      <button class="modal-close" onclick="closeModal('edit-modal')">&#10005;</button>
+    </div>
+    <div class="modal-body">
+      <div class="form-group">
+        <label class="form-label">Task Title</label>
+        <input id="edit-title" class="form-input" type="text" maxlength="120"/>
+      </div>
+      <div class="form-group">
+        <label class="form-label">Status</label>
+        <div class="status-toggle">
+          <div id="opt-pending" class="status-opt" onclick="selStatus('pending')">&#9203; Pending</div>
+          <div id="opt-done"    class="status-opt" onclick="selStatus('done')">&#9989; Done</div>
+        </div>
+      </div>
+      <div id="edit-meta" style="font-size:.76rem;color:#aab0c4;margin-top:2px;"></div>
+    </div>
+    <div class="modal-footer">
+      <button class="btn btn-ghost btn-sm" onclick="closeModal('edit-modal')">Cancel</button>
+      <button class="btn btn-primary btn-sm" onclick="handleUpdate()">Save Changes</button>
+    </div>
+  </div>
+</div>
+
+<!-- ══ Delete Confirm Modal ══ -->
+<div class="modal-overlay" id="del-modal">
+  <div class="modal">
+    <div class="modal-header">
+      <h2>&#128465;&#65039; Delete Task</h2>
+      <button class="modal-close" onclick="closeModal('del-modal')">&#10005;</button>
+    </div>
+    <div class="modal-body">
+      <div class="confirm-box">
+        <div class="ci">&#9888;&#65039;</div>
+        <p>Are you sure you want to delete<br>
+           <strong id="del-title"></strong>?<br>
+           This action cannot be undone.</p>
+      </div>
+    </div>
+    <div class="modal-footer">
+      <button class="btn btn-ghost btn-sm" onclick="closeModal('del-modal')">Cancel</button>
+      <button class="btn btn-danger btn-sm" onclick="handleDelete()">Yes, Delete It</button>
+    </div>
+  </div>
+</div>
+
+<!-- Toast container -->
+<div class="toast-wrap" id="toast-wrap"></div>
+
+<script>
+  // ── State ────────────────────────────────────────────────────────
+  let tasks      = [];
+  let filter     = 'all';
+  let editingId  = null;
+  let deletingId = null;
+  let editStatus = 'pending';
+
+  // ── API helpers (talk to Python Flask backend) ───────────────────
+  const api = {
+    get:    ()        => fetch('/api/tasks').then(r => r.json()),
+    post:   (title)   => fetch('/api/tasks', { method:'POST',
+                           headers:{'Content-Type':'application/json'},
+                           body: JSON.stringify({title}) }).then(r => r.json()),
+    put:    (id, data)=> fetch('/api/tasks/'+id, { method:'PUT',
+                           headers:{'Content-Type':'application/json'},
+                           body: JSON.stringify(data) }).then(r => r.json()),
+    delete: (id)      => fetch('/api/tasks/'+id, { method:'DELETE' }).then(r => r.json()),
+  };
+
+  // ── Load all tasks from Python backend ──────────────────────────
+  async function loadAll() {
+    tasks = await api.get();
+    renderList();
+  }
+
+  // ── Visible tasks (filter + search) ─────────────────────────────
+  function visible() {
+    const q = document.getElementById('search-input').value.trim().toLowerCase();
+    return tasks.filter(t => {
+      const mf = filter === 'all' ? true
+               : filter === 'pending' ? !t.done : t.done;
+      return mf && (!q || t.title.toLowerCase().includes(q));
+    });
+  }
+
+  // ── Render ───────────────────────────────────────────────────────
+  function renderList() {
+    const total   = tasks.length;
+    const done    = tasks.filter(t => t.done).length;
+    const pending = total - done;
+    document.getElementById('s-total').textContent   = total;
+    document.getElementById('s-done').textContent    = done;
+    document.getElementById('s-pending').textContent = pending;
+    const pct = total ? Math.round(done / total * 100) : 0;
+    document.getElementById('pct-label').textContent  = pct + '%';
+    document.getElementById('pct-fill').style.width   = pct + '%';
+
+    const list = document.getElementById('task-list');
+    const vs   = visible();
+
+    if (!vs.length) {
+      list.innerHTML =
+        '<li class="empty-state"><div class="ei">' +
+        (filter === 'done' ? '&#127881;' : '&#128203;') + '</div><p>' +
+        (filter === 'done'    ? 'No completed tasks yet. Keep going!'
+       : filter === 'pending' ? "No pending tasks! You're all caught up &#127881;"
+                              : 'Nothing here yet. Add your first task above!') +
+        '</p></li>';
+      return;
+    }
+
+    list.innerHTML = vs.map(t =>
+      `<li class="task-item${t.done ? ' done' : ''}" id="ti-${t.id}">
+        <button class="check-btn${t.done ? ' checked' : ''}" onclick="toggleDone(${t.id})"
+                title="${t.done ? 'Mark pending' : 'Mark done'}">
+          <svg class="tick" width="11" height="11" viewBox="0 0 24 24"
+               fill="none" stroke="#fff" stroke-width="3.5" stroke-linecap="round" stroke-linejoin="round">
+            <polyline points="20 6 9 17 4 12"/>
+          </svg>
+        </button>
+        <div class="task-info">
+          <div class="task-title">${esc(t.title)}</div>
+          <div class="task-meta">
+            <span class="badge badge-id">#${t.id}</span>
+            <span>${t.created_at}</span>
+            ${t.done ? '<span class="badge badge-done">&#10003; Completed</span>' : ''}
+          </div>
+        </div>
+        <div class="task-actions">
+          <button class="btn btn-warning btn-sm" title="Edit task"   onclick="openEdit(${t.id})">&#9999;&#65039;</button>
+          <button class="btn btn-danger  btn-sm" title="Delete task" onclick="openDel(${t.id})">&#128465;&#65039;</button>
+        </div>
+      </li>`
+    ).join('');
+  }
+
+  function esc(s) {
+    return s.replace(/&/g,'&amp;').replace(/</g,'&lt;')
+            .replace(/>/g,'&gt;').replace(/"/g,'&quot;').replace(/'/g,'&#39;');
+  }
+
+  // ── CREATE ───────────────────────────────────────────────────────
+  async function handleAdd() {
+    const inp   = document.getElementById('new-input');
+    const title = inp.value.trim();
+    if (!title) { toast('Please enter a task title.','err'); inp.focus(); return; }
+
+    const btn = document.getElementById('add-btn');
+    btn.classList.add('loading'); btn.disabled = true;
+
+    try {
+      const task = await api.post(title);
+      if (task.error) { toast(task.error, 'err'); return; }
+      tasks.push(task);
+      inp.value = '';
+      inp.focus();
+      setFilter('all');
+      renderList();
+      toast('Task #' + task.id + ' added! &#127881;', 'ok');
+    } catch { toast('Server error. Is Flask running?', 'err'); }
+    finally { btn.classList.remove('loading'); btn.disabled = false; }
+  }
+
+  // ── TOGGLE done ──────────────────────────────────────────────────
+  async function toggleDone(id) {
+    const t = tasks.find(x => x.id === id); if (!t) return;
+    const updated = await api.put(id, { done: !t.done });
+    Object.assign(t, updated);
+    renderList();
+    toast(updated.done ? '&#9989; Marked as complete!' : '&#8617;&#65039; Marked as pending');
+  }
+
+  // ── UPDATE ───────────────────────────────────────────────────────
+  function openEdit(id) {
+    const t = tasks.find(x => x.id === id); if (!t) return;
+    editingId  = id;
+    editStatus = t.done ? 'done' : 'pending';
+    document.getElementById('edit-title').value = t.title;
+    document.getElementById('edit-meta').textContent =
+      'Created: ' + t.created_at + '  ·  ID: #' + t.id;
+    selStatus(editStatus);
+    openModal('edit-modal');
+    setTimeout(() => document.getElementById('edit-title').focus(), 80);
+  }
+
+  function selStatus(s) {
+    editStatus = s;
+    document.getElementById('opt-pending').className = 'status-opt' + (s === 'pending' ? ' pend' : '');
+    document.getElementById('opt-done').className    = 'status-opt' + (s === 'done'    ? ' done' : '');
+  }
+
+  async function handleUpdate() {
+    if (!editingId) return;
+    const title = document.getElementById('edit-title').value.trim();
+    if (!title) { toast('Title cannot be empty.', 'err'); return; }
+    const updated = await api.put(editingId, { title, done: editStatus === 'done' });
+    const idx = tasks.findIndex(x => x.id === editingId);
+    if (idx !== -1) tasks[idx] = updated;
+    closeModal('edit-modal');
+    renderList();
+    toast('Task updated! &#9999;&#65039;', 'ok');
+    editingId = null;
+  }
+
+  // ── DELETE ───────────────────────────────────────────────────────
+  function openDel(id) {
+    const t = tasks.find(x => x.id === id); if (!t) return;
+    deletingId = id;
+    document.getElementById('del-title').textContent = '"' + t.title + '"';
+    openModal('del-modal');
+  }
+
+  async function handleDelete() {
+    if (!deletingId) return;
+    await api.delete(deletingId);
+    tasks = tasks.filter(x => x.id !== deletingId);
+    closeModal('del-modal');
+    renderList();
+    toast('Task deleted. &#128465;&#65039;');
+    deletingId = null;
+  }
+
+  // ── Filter ───────────────────────────────────────────────────────
+  function setFilter(f, el) {
+    filter = f;
+    document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
+    (el || document.querySelector('[data-f="'+f+'"]')).classList.add('active');
+    renderList();
+  }
+
+  // ── Modal ────────────────────────────────────────────────────────
+  function openModal(id)  { document.getElementById(id).classList.add('open'); }
+  function closeModal(id) { document.getElementById(id).classList.remove('open'); }
+  document.querySelectorAll('.modal-overlay').forEach(el =>
+    el.addEventListener('click', e => { if (e.target === el) el.classList.remove('open'); })
+  );
+
+  // ── Toast ────────────────────────────────────────────────────────
+  function toast(msg, type) {
+    const c  = document.getElementById('toast-wrap');
+    const el = document.createElement('div');
+    el.className = 'toast' + (type ? ' '+type : '');
+    el.innerHTML = msg;
+    c.appendChild(el);
+    setTimeout(() => el.remove(), 2800);
+  }
+
+  // ── Keyboard shortcuts ───────────────────────────────────────────
+  document.getElementById('new-input').addEventListener('keydown', e => {
+    if (e.key === 'Enter') handleAdd();
+  });
+  document.getElementById('edit-title').addEventListener('keydown', e => {
+    if (e.key === 'Enter')  handleUpdate();
+    if (e.key === 'Escape') closeModal('edit-modal');
+  });
+  document.addEventListener('keydown', e => {
+    if (e.key === 'Escape') {
+      closeModal('edit-modal');
+      closeModal('del-modal');
+    }
+  });
+
+  // ── Boot ─────────────────────────────────────────────────────────
+  loadAll();
+</script>
+</body>
+</html>
